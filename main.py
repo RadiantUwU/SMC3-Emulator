@@ -3,6 +3,7 @@ import sys
 import math
 import threading
 guion = 0
+#temp
 threadlist = []
 for i range(65535):threadlist.append('FE')
 if guion == 1:
