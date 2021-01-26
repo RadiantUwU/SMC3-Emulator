@@ -1,0 +1,24 @@
+4 0 64 #next_3
+7 12 23 #next_6
+7 13 0 #next_9
+7 14 1 #next_12
+9 13 #next_14
+11 3 #next_16
+9 14 #next_18
+11 4 #next_20
+4 0 3 #next_23
+6 12 #next_25
+9 13 #next_27
+10 3 #next_29
+9 14 #next_31
+10 4 #next_33
+41 #next_34
+6 6 #next_36
+13 4 #next_38
+9 13 #next_40
+11 3 #next_42
+9 14 #next_44
+11 4 #next_46
+4 0 25 #next_48
+23 #next_49
+#Note:_this_is_an_interpreter,_if you_want_to_jump_to_the_created_program_with_it_you_have_to_reset_the_computer_and_it_will_jump_to_it_automatically.
