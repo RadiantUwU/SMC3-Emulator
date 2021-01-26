@@ -3,9 +3,8 @@ import sys
 import math
 import threading
 guion = 0
-#temp
 threadlist = []
-for i range(65535):threadlist.append('FE')
+for i in range(65535):threadlist.append('FE')
 if guion == 1:
     import pygame
     pygame.init()
@@ -201,7 +200,7 @@ class newThread(threading.Thread):
         self.deleted = False
         self.threadlist = threadlist
         for i in range(len(threadlist)):
-            if threadlist[i] = 'FE':
+            if threadlist[i] == 'FE':
                 self.pos = i
                 break
         self.threadlist[self.pos] = self
@@ -289,8 +288,9 @@ self.outputs[0] = self.memory.readmem(self.getinp(0))
 ''','self.outputs[0] = self.getinp(0) * -1']
 class smc3code:
     def __init__(self,moduleself):
-        self.version = '0.0.0.1'
+        self.version = '0.0.0.2'
         print('SMC3 sim by Radiant, version',self.version)
+        print(terminalcolors.yellow + 'Note:The emulator started, but the computer not, to do that, please open the special menu by pressing CTRL C' + terminalcolors.endc)
         self.moduleself = moduleself
         self.sysconfig = self.moduleself.config[0]
         self.memory = []
@@ -306,6 +306,11 @@ class smc3code:
         self.systemspeed = self.sysconfig[1]
         self.oksyssped = [1,2,4,8,10,20,40]
         self.subroutine = 0
+        self.incrreg = 0
+        self.incrnum = 0
+        self.decrreg = 0
+        self.decrnum = 0
+        self.wui = 0
         if not self.systemspeed in self.oksyssped:
             raise ZeroDivisionError
         for i in range(16):self.registers.append(0)
@@ -331,7 +336,7 @@ class smc3code:
         # 2 = external memory size (max 65535)
     def exec(self):
         global tick
-        if self.online == 1 and tick % (40 / self.systemspeed) == 0:
+        if self.online == 1 and tick % (40 / self.systemspeed) == 0 and self.wui == 0:
             self.pc %= self.sysconfig[2]
             inst = self.memory[self.pc]
             arg1 = self.memory[(self.pc + 1) % self.sysconfig[2]]
@@ -346,16 +351,10 @@ class smc3code:
                 self.pc += 1
             elif inst == 2:
                 self.online = 0
-                print(terminalcolors.yellow + "In " + str(pc) + " ERR action call" + terminalcolors.endc)
+                print(terminalcolors.yellow + "In " + str(pc) + " ERB action call" + terminalcolors.endc)
                 self.pc += 1
             elif inst == 3:
-                self.pc = 0
-                self.registers = []
-                self.stackmem = []
-                self.fulfilledcond = 0
-                for i in range(16):self.registers.append(0)
-                for i in range(self.sysconfig[0]):self.stackmem.append(0)
-                print("System reboot")
+                self.reset()
             elif inst == 4:
                 self.registers[3] = arg1
                 self.registers[4] = arg2
@@ -366,77 +365,98 @@ class smc3code:
             elif inst == 6:
                 self.memory[self.registers[3] * 256 + self.registers[4]] = self.registers[arg1]
                 self.pc += 2
-            elif inst == 7:
+            elif inst == 133:
                 self.registers[arg1] = len(self.memory) // 256
                 self.registers[arg2] = len(self.memory) % 256
                 self.pc += 3
-            elif inst == 8:
+            elif inst == 7:
                 self.registers[arg1] = arg2
                 self.pc += 3
-            elif inst == 9:
+            elif inst == 8:
                 self.registers[arg2] = self.registers[arg1]
                 self.pc += 3
-            elif inst == 10:
+            elif inst == 9:
                 self.intramadr = self.registers[arg1]
                 self.pc += 2
-            elif inst == 11:
+            elif inst == 10:
                 self.registers[arg1] = self.intram[self.intramadr]
                 self.pc += 2
-            elif inst == 12:
+            elif inst == 11:
                 self.intram[self.intramadr] = self.registers[arg1]
                 self.pc += 2
-            elif inst == 13:
+            elif inst == 12:
                 self.registers[arg1] = (len(self.intram) - 1) % 256
                 self.pc += 2
-            elif inst == 14:
-                if arg1 == 4:
-                    self.registers[arg1] += 1
-                    if self.registers[4] == 256:
-                        self.registers[4] = 0
-                        self.registers[3] += 1
-                        if self.registers[3] == 256:
-                            self.registers[3] = 0
+            elif inst == 13:
+                if arg1 in self.increg:
+                    if arg1 == 4:
+                        self.registers[arg1] += 1
+                        if self.registers[4] == 256:
+                            self.registers[4] = 0
+                            self.registers[3] += 1
+                            if self.registers[3] == 256:
+                                self.registers[3] = 0
+                                if self.registers[2] == 6:_cond = 1
+                            else:
+                                if self.registers[2] == 6:_cond = 0
+                    else:
+                        self.registers[arg1] += 1
+                        if self.registers[arg1] == 256:
+                            self.registers[arg1] = 0
                             if self.registers[2] == 6:_cond = 1
                         else:
                             if self.registers[2] == 6:_cond = 0
-                else:
-                    self.registers[arg1] += 1
-                    if self.registers[arg1] == 256:
-                        self.registers[arg1] = 0
-                        if self.registers[2] == 6:_cond = 1
+                self.pc += 2
+            elif inst == 14:
+                if arg1 in self.increg:
+                    if arg1 == 4:
+                        self.registers[arg1] -= 1
+                        if self.registers[4] == -1:
+                            self.registers[4] = 255
+                            self.registers[3] -= 1
+                            if self.registers[3] == -1:
+                                self.registers[3] = 255
+                                if self.registers[2] == 6:_cond = 1
+                            else:
+                                if self.registers[2] == 6:_cond = 0
                     else:
-                        if self.registers[2] == 6:_cond = 0
+                        self.registers[arg1] -= 1
+                        if self.registers[arg1] == -1:
+                            self.registers[arg1] = 255
+                            if self.registers[2] == 6:_cond = 1
+                        else:
+                            if self.registers[2] == 6:_cond = 0
                 self.pc += 2
             elif inst == 15:
-                if arg1 == 4:
-                    self.registers[arg1] -= 1
-                    if self.registers[4] == -1:
-                        self.registers[4] = 255
-                        self.registers[3] -= 1
-                        if self.registers[3] == -1:
-                            self.registers[3] = 255
-                            if self.registers[2] == 6:_cond = 1
-                        else:
-                            if self.registers[2] == 6:_cond = 0
-                else:
-                    self.registers[arg1] -= 1
-                    if self.registers[arg1] == -1:
-                        self.registers[arg1] = 255
-                        if self.registers[2] == 6:_cond = 1
-                    else:
-                        if self.registers[2] == 6:_cond = 0
-                self.pc += 2
-            elif inst == 16:
                 summed = self.registers[0] + self.registers[1]
-                if summed > 255:if self.registers[2] == 6:_cond = 1
-                else:if self.registers[2] == 6:_cond = 0
+                if summed > 255:
+                    if self.registers[2] == 6:_cond = 1
+                else:
+                    if self.registers[2] == 6:_cond = 0
+                self.registers[11] = summed % 256
+                self.pc += 1
+            elif inst == 16:
+                summed = self.registers[0] - self.registers[1]
+                if summed < 0:
+                    if self.registers[2] == 6:_cond = 1
+                else:
+                    if self.registers[2] == 6:_cond = 0
                 self.registers[11] = summed % 256
                 self.pc += 1
             elif inst == 17:
-                summed = self.registers[0] - self.registers[1]
-                if summed < 0:if self.registers[2] == 6:_cond = 1
-                else:if self.registers[2] == 6:_cond = 0
-                self.registers[11] = summed % 256
+                a = bin(self.registers[0])[2:]
+                b = bin(self.registers[1])[2:]
+                c = '0b'
+                while len(a) < 8:
+                    a = '0' + a
+                while len(b) < 8:
+                    b = '0' + b
+                for i in range(8):
+                    if a[i] == '1' and b[i] == '1':
+                        c += '1'
+                    else:
+                        c += '0'
+                self.registers[11] = int(c,2)
                 self.pc += 1
             elif inst == 18:
                 a = bin(self.registers[0])[2:]
@@ -447,7 +467,7 @@ class smc3code:
                 while len(b) < 8:
                     b = '0' + b
                 for i in range(8):
-                    if a[i] == '1' and b[i] == '1':
+                    if a[i] == '1' or b[i] == '1':
                         c += '1'
                     else:
                         c += '0'
@@ -477,7 +497,7 @@ class smc3code:
                 while len(b) < 8:
                     b = '0' + b
                 for i in range(8):
-                    if a[i] == '1' or b[i] == '1':
+                    if xor((a[i] == '1'),(b[i] == '1')):
                         c += '1'
                     else:
                         c += '0'
@@ -485,64 +505,99 @@ class smc3code:
                 self.pc += 1
             elif inst == 21:
                 a = bin(self.registers[0])[2:]
-                b = bin(self.registers[1])[2:]
-                c = '0b'
-                while len(a) < 8:
-                    a = '0' + a
-                while len(b) < 8:
-                    b = '0' + b
-                for i in range(8):
-                    if xor((a[i] == '1'),(b[i] == '1')):
-                        c += '1'
-                    else:
-                        c += '0'
-                self.registers[11] = int(c,2)
-                self.pc += 1
-            elif inst == 22:
-                a = bin(self.registers[0])[2:]
                 a = a + "0"
-                if a[0] == "1":if self.registers[2] == 6:_cond = 1
-                else:if self.registers[2] == 6:_cond = 0
+                if a[0] == "1":
+                    if self.registers[2] == 6:_cond = 1
+                else:
+                    if self.registers[2] == 6:_cond = 0
                 a = '0b' + a[1:]
                 self.registers[11] = int(a,2)
                 self.pc += 1
-            elif inst == 23:
+            elif inst == 22:
                 a = bin(self.registers[0])[2:]
                 a = "0" + a
-                if a[-1] == "1":if self.registers[2] == 6:_cond = 1
-                else:if self.registers[2] == 6:_cond = 0
+                if a[-1] == "1":
+                    if self.registers[2] == 6:_cond = 1
+                else:
+                    if self.registers[2] == 6:_cond = 0
                 a = '0b' + a[0:-1]
                 self.registers[11] = int(a,2)
                 self.pc += 1
-            elif inst == 24:
+            elif inst == 23:
                 self.pc = self.registers[3] * 256 + self.registers[4]
-            elif inst == 25:
+            elif inst == 24:
                 if _cond == 1:
                     self.pc = self.registers[3] * 256 + self.registers[4]
                 else:
                     self.pc += 1
-            elif inst == 26:
+            elif inst == 25:
                 self.subroutine = self.pc + 1
                 self.pc = self.registers[3] * 256 + self.registers[4]
-            elif inst == 27:
+            elif inst == 26:
                 if _cond == 1:
                     self.subroutine = self.pc + 1
                     self.pc = self.registers[3] * 256 + self.registers[4]
                 else:
                     self.pc += 1
-            elif inst == 28:
+            elif inst == 27:
                 self.pc = self.subroutine
                 self.subroutine = 0
-            elif inst == 29:
+            elif inst == 28:
                 self.stackmem[self.registers[8]] = self.registers[arg1]
                 self.registers[8] += 1
                 self.registers[8] %= len(self.stackmem)
                 self.pc += 2
-            elif inst == 30:
+            elif inst == 29:
                 self.registers[arg1] = self.stackmem[self.registers[8]]
                 self.registers[8] -= 1
                 self.registers[8] %= len(self.stackmem)
                 self.pc += 2
+            elif inst == 39:
+                if arg1 in self.increg:
+                    self.incrreg = arg1
+                    self.incrnum = self.registers[arg1]
+            elif inst == 40:
+                if arg1 in self.increg:
+                    self.decrreg = arg1
+                    self.decrnum = self.registers[arg1]
+            elif inst == 41:
+                print('System paused, awaiting system user input')
+                self.wui = 1
+                self.pc += 1
+            elif inst == 69:
+                print(terminalcolors.blue + '69, nice' + terminalcolors.endc)
+                self.registers[arg1] = 69
+                self.pc += 2
+            elif inst == 128:
+                self.registers[arg1] = 1
+                self.pc += 2
+            elif inst == 129:
+                self.registers[arg1] = self.systemspeed
+                self.pc += 2
+            elif inst == 130:
+                if self.registers[arg1] in self.oksyssped:
+                    self.systemspeed = self.registers[arg1]
+                self.pc += 2
+            elif inst == 131:
+                if arg1 in self.oksyssped:
+                    self.systemspeed = arg1
+                self.pc += 2
+            elif inst == 132:
+                self.intram = []
+                for i in range(256):self.intram.append(0)
+                self.pc += 1
+            elif inst == 133:
+                self.registers[arg1] = self.sysconfig[2] // 256
+                self.registers[arg2] = self.sysconfig[2] % 256
+                self.pc += 3
+            print("Output: " + bin(self.registers[7])[2:])
+        if tick % 40 == 0:
+            if self.incrnum != 0:
+                self.registers[arg1] += 1
+                self.incrnum -= 1
+            if self.decrnum != 0:
+                self.registers[arg1] -= 1
+                self.decrnum -= 1
     def reset(self):
         self.pc = 0
         self.registers = []
@@ -566,12 +621,14 @@ def xorstr(a):
         b = (a + b) % 2
     return(b)
 clocktick = 0
-ticksys = newThread("ticksystem","global clocktick\nwhile True:\n  clocktick = 1\n  time.sleep(1 / 40)",threadlist,group)
-ticksys.start()
 prompt = ""
 promptcode = ""
 group = ModuleGroup()
+speedmultiplier = 1
+ticksys = newThread("ticksystem","global clocktick\nwhile True:\n  clocktick = 1\n  time.sleep(1 / (" + str(speedmultiplier) + "* 40))",threadlist,group)
+ticksys.start()
 smc3 = Module(0,["self.thesmc3.exec()","self.thesmc3 = smc3code(self)"],0,"SMC3",True,[[256,1,65536]])
+group.add(smc3)
 if guion == 1:
     while True:
         display_surface.fill(black)
@@ -587,7 +644,7 @@ else:
     while True:
         if inmenu == 0:
             try:
-                waituntil("global clocktick","clocktick == 1",0.01)
+                waituntil("global clocktick","clocktick == 1",(0.01 / speedmultiplier))
                 clocktick = 0
                 e = newThread("emulation","global group\nglobal tick\ngroup.emulate()\ngroup.update()\ntick += 1",threadlist,group)
                 e.start()
@@ -596,10 +653,11 @@ else:
                 print(terminalcolors.blue + 'Entered menu, emulation paused')
                 inmenu = 1
         else:
-            choice = input("Select(changeinp,reset,exitmenu,start,stop" + prompt + ")")
+            choice = input("Select(changeinp,reset,exitmenu,start,stop,changespeed" + prompt + ")")
             if choice == "changeinp":
                 try:
                     smc3.thesmc3.registers[6] = (int(input("Input:")) % 256)
+                    smc3.thesmc3.wui = 0
                 except:
                     pass
             elif choice == "reset":
@@ -610,5 +668,10 @@ else:
                 smc3.thesmc3.online = 1
             elif choice == "stop":
                 smc3.thesmc3.online = 0
+            elif choice == "changespeed":
+                try:
+                    speedmultiplier = int(input("Speed multiplier(changes tps, all modules affected):"))
+                except:
+                    pass
             else:
                 exec(promptcode)
