@@ -6,6 +6,10 @@ with open('./config.txt','r') as reader:
     config = reader.read()
 guion = 0
 threadlist = []
+cuascii = " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!@#$%^&*()_-+=?/<>,.`~\\|[]{}:;'\""
+customascii = []
+for i in cuascii:
+    customascii.append(i)
 for i in range(65535):threadlist.append('FE')
 if guion == 1:
     import pygame
@@ -293,7 +297,7 @@ self.outputs[0] = self.memory.readmem(self.getinp(0))
 ''','self.outputs[0] = self.getinp(0) * -1']
 class smc3code:
     def __init__(self,moduleself):
-        self.version = '0.0.0.2'
+        self.version = '0.0.2.0'
         print('SMC3 sim by Radiant, version',self.version)
         self.moduleself = moduleself
         self.sysconfig = self.moduleself.config[0]
@@ -380,6 +384,11 @@ class smc3code:
                 self.pc += 3
             elif inst == 5:
                 self.registers[arg1] = self.memory[self.registers[3] * 256 + self.registers[4]]
+                if arg1 == 7:
+                    a = bin(self.registers[7])[2:]
+                    while len(a) < 8:
+                        a = '0' + a
+                    print(terminalcolors.blue + "Output:" + a + terminalcolors.endc)
                 self.pc += 2
             elif inst == 6:
                 self.memory[self.registers[3] * 256 + self.registers[4]] = self.registers[arg1]
@@ -390,6 +399,11 @@ class smc3code:
                 self.pc += 3
             elif inst == 7:
                 self.registers[arg1] = arg2
+                if arg1 == 7:
+                    a = bin(self.registers[7])[2:]
+                    while len(a) < 8:
+                        a = '0' + a
+                    print(terminalcolors.blue + "Output:" + a + terminalcolors.endc)
                 self.pc += 3
             elif inst == 8:
                 self.registers[arg2] = self.registers[arg1]
@@ -399,6 +413,11 @@ class smc3code:
                 self.pc += 2
             elif inst == 10:
                 self.registers[arg1] = self.intram[self.intramadr]
+                if arg1 == 7:
+                    a = bin(self.registers[7])[2:]
+                    while len(a) < 8:
+                        a = '0' + a
+                    print(terminalcolors.blue + "Output:" + a + terminalcolors.endc)
                 self.pc += 2
             elif inst == 11:
                 self.intram[self.intramadr] = self.registers[arg1]
@@ -617,7 +636,6 @@ class smc3code:
             a = bin(self.registers[7])[2:]
             while len(a) < 8:
                 a = '0' + a
-            print(terminalcolors.blue + "Output:" + a + terminalcolors.endc)
         if tick % 40 == 0:
             if self.incrnum != 0:
                 self.registers[arg1] += 1
@@ -707,6 +725,7 @@ else:
             elif choice == "reset":
                 smc3.thesmc3.reset()
             elif choice == "exitmenu":
+                print(terminalcolors.endc)
                 inmenu = 0
             elif choice == "start":
                 smc3.thesmc3.online = 1
@@ -714,7 +733,7 @@ else:
                 smc3.thesmc3.online = 0
             elif choice == "changespeed":
                 try:
-                    print(terminalcolors.yellow + 'Note: Speed multiplier 1 has 40 tps' + terminalcolors.endc)
+                    print(terminalcolors.yellow + 'Note: Speed multiplier 1 has 40 tps' + terminalcolors.endc + terminalcolors.blue)
                     speedmultiplier = int(input("Speed multiplier(changes tps, all modules affected):"))
                     ticksys.count = 10
                     ticksys = newThread("ticksystem","global clocktick\nwhile True:\n  clocktick = 1\n  time.sleep(1 / (" + str(speedmultiplier) + "* 40))",threadlist,group,-1)
