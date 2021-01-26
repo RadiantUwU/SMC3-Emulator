@@ -2,6 +2,8 @@ import time
 import sys
 import math
 import threading
+with open('./config.txt','r') as reader:
+    config = reader.read()
 guion = 0
 threadlist = []
 for i in range(65535):threadlist.append('FE')
@@ -17,6 +19,16 @@ def waituntil(init,cond,times):
     exec(init)
     while not eval(cond):
         time.sleep(times)
+class terminalcolors:
+    pink = ''
+    blue = ''
+    cyan = ''
+    green = ''
+    yellow = ''
+    red = ''
+    endc = ''
+    bold = ''
+    underline = ''
 class Module:
     def __init__(self,outputs,code,mID,name,hasinitcode,config):
         self.inputs = []
@@ -51,16 +63,6 @@ class Module:
     def getinp(self,num):
         temp = self.inputs[num]
         return(temp[0].activeoutputs[temp[1]])
-class terminalcolors:
-    pink = '\033[95m'
-    blue = '\033[94m'
-    cyan = '\033[96m'
-    green = '\033[92m'
-    yellow = '\033[93m'
-    red = '\033[91m'
-    endc = '\033[0m'
-    bold = '\033[1m'
-    underline = '\033[4m'
 class ModuleGroup:
     def __init__(self):
         self.arr = []
@@ -193,7 +195,7 @@ class Shell:
     def clear(self):
         print('\n' * 50)
 class newThread(threading.Thread):
-    def __init__(self,Name,execute,threadlist,itself):
+    def __init__(self,Name,execute,threadlist,itself,count):
         threading.Thread.__init__(self)
         self.name = Name
         self.code = execute
@@ -205,9 +207,12 @@ class newThread(threading.Thread):
                 break
         self.threadlist[self.pos] = self
         self.itself = itself
+        self.count = count
     def run(self):
         itself = self.itself
-        exec(self.code)
+        while self.count != 0:
+            exec(self.code)
+            self.count -= 1
         self.deleted = True
         self.threadlist[self.pos] = 'FE'
 #0- andgate (digital)
@@ -290,7 +295,6 @@ class smc3code:
     def __init__(self,moduleself):
         self.version = '0.0.0.2'
         print('SMC3 sim by Radiant, version',self.version)
-        print(terminalcolors.yellow + 'Note:The emulator started, but the computer not, to do that, please open the special menu by pressing CTRL C' + terminalcolors.endc)
         self.moduleself = moduleself
         self.sysconfig = self.moduleself.config[0]
         self.memory = []
@@ -317,6 +321,21 @@ class smc3code:
         for i in range(256):self.intram.append(0)
         for i in range(self.sysconfig[2]):self.memory.append(0)
         for i in range(self.sysconfig[0]):self.stackmem.append(0)
+        with open('./smc3code.txt','r') as reader:
+            tempmem = reader.read().split('\n')
+        for i in range(len(tempmem)):
+            tempmem[i] = tempmem[i].split(' ')
+        tempmeme = []
+        for i in tempmem:
+            if type(i) == list:
+                for j in i:
+                    if not j.startswith('#'):
+                        tempmeme.append(j)
+            else:
+                if not i.startswith('#'):
+                    tempmeme.append(i)
+        for i in range(len(tempmeme)):
+            self.memory[i] = int(tempmeme[i])
         # 0 = ALU A
         # 1 = ALU B
         # 2 = COND REG
@@ -526,6 +545,7 @@ class smc3code:
             elif inst == 23:
                 self.pc = self.registers[3] * 256 + self.registers[4]
             elif inst == 24:
+                self.calccond()
                 if _cond == 1:
                     self.pc = self.registers[3] * 256 + self.registers[4]
                 else:
@@ -534,6 +554,7 @@ class smc3code:
                 self.subroutine = self.pc + 1
                 self.pc = self.registers[3] * 256 + self.registers[4]
             elif inst == 26:
+                self.calccond()
                 if _cond == 1:
                     self.subroutine = self.pc + 1
                     self.pc = self.registers[3] * 256 + self.registers[4]
@@ -561,8 +582,15 @@ class smc3code:
                     self.decrreg = arg1
                     self.decrnum = self.registers[arg1]
             elif inst == 41:
+                global pauseonWUI
                 print('System paused, awaiting system user input')
-                self.wui = 1
+                if pauseonWUI:
+                    try:
+                        self.registers[6] = int(input("Input:"))
+                        print("Resumed")
+                    except:
+                        pass
+                else:self.wui = 1
                 self.pc += 1
             elif inst == 69:
                 print(terminalcolors.blue + '69, nice' + terminalcolors.endc)
@@ -586,11 +614,10 @@ class smc3code:
                 self.intram = []
                 for i in range(256):self.intram.append(0)
                 self.pc += 1
-            elif inst == 133:
-                self.registers[arg1] = self.sysconfig[2] // 256
-                self.registers[arg2] = self.sysconfig[2] % 256
-                self.pc += 3
-            print("Output: " + bin(self.registers[7])[2:])
+            a = bin(self.registers[7])[2:]
+            while len(a) < 8:
+                a = '0' + a
+            print(terminalcolors.blue + "Output:" + a + terminalcolors.endc)
         if tick % 40 == 0:
             if self.incrnum != 0:
                 self.registers[arg1] += 1
@@ -621,14 +648,31 @@ def xorstr(a):
         b = (a + b) % 2
     return(b)
 clocktick = 0
-prompt = ""
-promptcode = ""
-group = ModuleGroup()
-speedmultiplier = 1
-ticksys = newThread("ticksystem","global clocktick\nwhile True:\n  clocktick = 1\n  time.sleep(1 / (" + str(speedmultiplier) + "* 40))",threadlist,group)
-ticksys.start()
-smc3 = Module(0,["self.thesmc3.exec()","self.thesmc3 = smc3code(self)"],0,"SMC3",True,[[256,1,65536]])
-group.add(smc3)
+exec(config)
+if smc3.thesmc3.online == 0:
+    print(terminalcolors.yellow + 'Note:The emulator started, but the computer not, to do that, please open the special menu by pressing CTRL C' + terminalcolors.endc)
+class terminalcolors:
+    global colorsupport
+    if colorsupport:
+        pink = '\033[95m'
+        blue = '\033[94m'
+        cyan = '\033[96m'
+        green = '\033[92m'
+        yellow = '\033[93m'
+        red = '\033[91m'
+        endc = '\033[0m'
+        bold = '\033[1m'
+        underline = '\033[4m'
+    else:
+        pink = ''
+        blue = ''
+        cyan = ''
+        green = ''
+        yellow = ''
+        red = ''
+        endc = ''
+        bold = ''
+        underline = ''
 if guion == 1:
     while True:
         display_surface.fill(black)
@@ -646,7 +690,7 @@ else:
             try:
                 waituntil("global clocktick","clocktick == 1",(0.01 / speedmultiplier))
                 clocktick = 0
-                e = newThread("emulation","global group\nglobal tick\ngroup.emulate()\ngroup.update()\ntick += 1",threadlist,group)
+                e = newThread("emulation","global group\nglobal tick\ngroup.emulate()\ngroup.update()\ntick += 1",threadlist,group,1)
                 e.start()
                 e.join()
             except KeyboardInterrupt:
@@ -670,7 +714,11 @@ else:
                 smc3.thesmc3.online = 0
             elif choice == "changespeed":
                 try:
+                    print(terminalcolors.yellow + 'Note: Speed multiplier 1 has 40 tps' + terminalcolors.endc)
                     speedmultiplier = int(input("Speed multiplier(changes tps, all modules affected):"))
+                    ticksys.count = 10
+                    ticksys = newThread("ticksystem","global clocktick\nwhile True:\n  clocktick = 1\n  time.sleep(1 / (" + str(speedmultiplier) + "* 40))",threadlist,group,-1)
+                    ticksys.start()
                 except:
                     pass
             else:
