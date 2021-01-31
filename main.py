@@ -359,6 +359,7 @@ class smc3code:
         # 2 = external memory size (max 65535)
     def exec(self):
         global tick
+        #self.moduleself.outputs[2] = 0
         if self.online == 1 and tick % (40 / self.systemspeed) == 0 and self.wui == 0:
             self.pc %= self.sysconfig[2]
             inst = self.memory[self.pc]
@@ -370,11 +371,11 @@ class smc3code:
                 self.pc += 1
             elif inst == 1:
                 self.online = 0
-                print(terminalcolors.yellow + "In " + str(pc) + " ERR action call" + terminalcolors.endc)
+                print(terminalcolors.yellow + "In " + str(self.pc) + " ERR action call" + terminalcolors.endc)
                 self.pc += 1
             elif inst == 2:
                 self.online = 0
-                print(terminalcolors.yellow + "In " + str(pc) + " ERB action call" + terminalcolors.endc)
+                print(terminalcolors.yellow + "In " + str(self.pc) + " ERB action call" + terminalcolors.endc)
                 self.pc += 1
             elif inst == 3:
                 self.reset()
@@ -407,6 +408,11 @@ class smc3code:
                 self.pc += 3
             elif inst == 8:
                 self.registers[arg2] = self.registers[arg1]
+                if arg2 == 7:
+                    a = bin(self.registers[7])[2:]
+                    while len(a) < 8:
+                        a = '0' + a
+                    print(terminalcolors.blue + "Output:" + a + terminalcolors.endc)
                 self.pc += 3
             elif inst == 9:
                 self.intramadr = self.registers[arg1]
@@ -592,15 +598,15 @@ class smc3code:
                 self.registers[8] -= 1
                 self.registers[8] %= len(self.stackmem)
                 self.pc += 2
-            elif inst == 39:
+            elif inst == 40:
                 if arg1 in self.increg:
                     self.incrreg = arg1
                     self.incrnum = self.registers[arg1]
-            elif inst == 40:
+            elif inst == 41:
                 if arg1 in self.increg:
                     self.decrreg = arg1
                     self.decrnum = self.registers[arg1]
-            elif inst == 41:
+            elif inst == 42:
                 global pauseonWUI
                 print('System paused, awaiting system user input')
                 if pauseonWUI:
@@ -643,6 +649,7 @@ class smc3code:
             if self.decrnum != 0:
                 self.registers[arg1] -= 1
                 self.decrnum -= 1
+        #self.moduleself.outputs[0] = self.registers[5]
     def reset(self):
         self.pc = 0
         self.registers = []
@@ -653,6 +660,11 @@ class smc3code:
         print("System reboot")
     def calccond(self):
         _cond = eval(self.registers[2])
+class expansioncode:
+    def __init__(self,moduleself):
+        self.moduleself = moduleself
+        self.numstate = 0
+        self.state = 0
 def xor(a,b):
     if (not a) and b:
         return(True)
