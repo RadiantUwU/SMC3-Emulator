@@ -1,0 +1,14 @@
+#in this file you should be able to add modules, to be used with smc3
+colorsupport = False
+prompt = ""
+promptcode = ""
+speedmultiplier = 1
+group = ModuleGroup()
+ticksys = newThread("ticksystem","global clocktick\nwhile True:\n  clocktick = 1\n  time.sleep(1 / (" + str(speedmultiplier) + "* 40))",threadlist,group,-1)
+ticksys.start()
+smc3 = Module(0,["self.thesmc3.exec()","self.thesmc3 = smc3code(self)"],3,"SMC3",True,[[256,1,65536]])
+smc3.thesmc3.systemspeed = 40
+#Note: The valid system speeds are 1,2,4,8,10,20,40hz
+smc3.thesmc3.online = 1
+pauseonWUI = True
+group.add(smc3)
