@@ -311,7 +311,6 @@ class smc3code:
         self.fulfilledcond = 0
         self.pc = 0
         self.online = 0
-        self.systemspeed = self.sysconfig[1]
         self.oksyssped = [1,2,4,8,10,20,40]
         self.subroutine = 0
         self.incrreg = 0
@@ -319,8 +318,6 @@ class smc3code:
         self.decrreg = 0
         self.decrnum = 0
         self.wui = 0
-        if not self.systemspeed in self.oksyssped:
-            raise ZeroDivisionError
         for i in range(16):self.registers.append(0)
         for i in range(256):self.intram.append(0)
         for i in range(self.sysconfig[2]):self.memory.append(0)
@@ -576,18 +573,25 @@ class smc3code:
                 else:
                     self.pc += 1
             elif inst == 25:
-                self.subroutine = self.pc + 1
+                self.stackmem[self.registers[8]] = self.pc // 256
+                self.stackmem[(self.registers[8] + 1) % len(self.stackmem)] = self.pc % 256
+                self.registers[8] += 2
+                self.registers[8] %= len(self.stackmem)
                 self.pc = self.registers[3] * 256 + self.registers[4]
             elif inst == 26:
                 self.calccond()
                 if _cond == 1:
-                    self.subroutine = self.pc + 1
+                    self.stackmem[self.registers[8]] = self.pc // 256
+                    self.stackmem[(self.registers[8] + 1) % len(self.stackmem)] = self.pc % 256
+                    self.registers[8] += 2
+                    self.registers[8] %= len(self.stackmem)
                     self.pc = self.registers[3] * 256 + self.registers[4]
                 else:
                     self.pc += 1
             elif inst == 27:
-                self.pc = self.subroutine
-                self.subroutine = 0
+                self.pc = self.stackmem[(self.registers[8] - 1) % len(self.stackmem)] + self.stackmem[(self.registers[8] - 2) % len(self.stackmem)] * 256
+                self.registers[8] -= 2
+                self.registers[8] %= len(self.stackmem)
             elif inst == 28:
                 self.stackmem[self.registers[8]] = self.registers[arg1]
                 self.registers[8] += 1
@@ -639,16 +643,23 @@ class smc3code:
                 self.intram = []
                 for i in range(256):self.intram.append(0)
                 self.pc += 1
-            a = bin(self.registers[7])[2:]
-            while len(a) < 8:
-                a = '0' + a
         if tick % 40 == 0:
             if self.incrnum != 0:
-                self.registers[arg1] += 1
+                self.registers[self.incrreg] += 1
                 self.incrnum -= 1
+                if self.incrreg == 7:
+                    a = bin(self.registers[7])[2:]
+                    while len(a) < 8:
+                        a = '0' + a
+                    print(terminalcolors.blue + "Output:" + a + terminalcolors.endc)
             if self.decrnum != 0:
-                self.registers[arg1] -= 1
+                self.registers[self.decrreg] -= 1
                 self.decrnum -= 1
+                if self.decrreg == 7:
+                    a = bin(self.registers[7])[2:]
+                    while len(a) < 8:
+                        a = '0' + a
+                    print(terminalcolors.blue + "Output:" + a + terminalcolors.endc)
         #self.moduleself.outputs[0] = self.registers[5]
     def reset(self):
         self.pc = 0
