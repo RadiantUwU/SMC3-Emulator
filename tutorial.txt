@@ -1,0 +1,5 @@
+Put your code in smc3code.txt
+run the file
+use CTRL C to enter special menu, allows you to do stuff
+modify config.txt to what you want
+note: in config.txt there you will be able to add expansions, yet currently you cant, since there is no code for that
