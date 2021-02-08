@@ -1,1 +1,11 @@
-
+0.1.0.0 release-----
+Major improvements:
+  Added expansion support and expansion commands
+Minor improvements:
+  Added Screen expansion
+  Added mide variable for expansion import coders(current free mid)
+  Added python shell for debugging, you can enter in it with '>' (its exec() shell)
+Bug fixes:
+  Fixed bug which when you selected an invalid instruction the pc would crash instead of skipping over it
+  Fixed bug where pc can jump instantly to an invalid instruction
+  Fixed bug where output register wouldnt update on some instructions
